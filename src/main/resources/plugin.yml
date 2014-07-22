@@ -1,0 +1,7 @@
+name: ExplosiveRollback
+version: 0.0.2
+main: io.github.ultimatedillon.explosiverollback.ExplosiveRollback
+
+commands:
+  explode:
+    description: Explode shit ...in a good way.
