@@ -1,7 +1,14 @@
 name: ExplosiveRollback
-version: 0.0.2
+version: 0.0.50
 main: io.github.ultimatedillon.explosiverollback.ExplosiveRollback
 
 commands:
   explode:
     description: Explode shit ...in a good way.
+    usage: |
+           Usage:
+           /<command> <player> <radius> - Fires a pig at the targeted block and rolls back changes made by the specified player within the chosen radius.
+
+permissions:
+  explosiverollback.explode:
+    description: Allows you to use /explode to roll back changes... explosively...

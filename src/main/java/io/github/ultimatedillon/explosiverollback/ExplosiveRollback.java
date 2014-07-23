@@ -1,13 +1,17 @@
 package io.github.ultimatedillon.explosiverollback;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
@@ -18,6 +22,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
 
+import de.diddiz.LogBlock.BlockChange;
 import de.diddiz.LogBlock.Consumer;
 import de.diddiz.LogBlock.LogBlock;
 import de.diddiz.LogBlock.CommandsHandler.CommandRollback;
@@ -58,58 +63,75 @@ public final class ExplosiveRollback extends JavaPlugin {
 			logblock.getCommandsHandler().new CommandRollback(player, params, true);
 		} catch (Exception ex) {
 			getLogger().warning("[ExplosiveRollback] Could not trigger rollback!");
-			ex.printStackTrace();
+			getLogger().warning(ex.getMessage());
 		}
 	}
 	
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("explode")) {
-			player = (Player) sender;
-			final World world = player.getWorld();
-			Location ploc = player.getLocation();
-			double pyaw = Math.toRadians((ploc.getYaw() + 90.0F) % 360.0F);
-    	    double ppitch = Math.toRadians(ploc.getPitch() * -1.0F);
-    	    
-			final Location targLoc = player.getTargetBlock(null, 200).getLocation();
-			paramsMap.put("player", args[0]);
-			paramsMap.put("radius", args[1]);
-			locMap.put("x", targLoc.getBlockX());
-			locMap.put("y", targLoc.getBlockY());
-			locMap.put("z", targLoc.getBlockZ());
+			if (sender instanceof Player) {
+				player = (Player) sender;
+				
+				if (player.hasPermission("explosiverollbacks.explode")) {
+					if (args.length < 1) {
+						player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cNot enough arguments!"));
+						return false;
+					} else if (args.length < 2) {
+						player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&cToo many arguments!"));
+						return false;
+					} else {
+						final World world = player.getWorld();
+						Location ploc = player.getLocation();
+						double pyaw = Math.toRadians((ploc.getYaw() + 90.0F) % 360.0F);
+			    	    double ppitch = Math.toRadians(ploc.getPitch() * -1.0F);
+			    	    
+						final Location targLoc = player.getTargetBlock(null, 200).getLocation();
+						paramsMap.put("player", args[0]);
+						paramsMap.put("radius", args[1]);
+						locMap.put("x", targLoc.getBlockX());
+						locMap.put("y", targLoc.getBlockY());
+						locMap.put("z", targLoc.getBlockZ());
+						
+						Location loc = player.getLocation().add(2.0D * Math.cos(pyaw), 2.0D, 2.0D * Math.sin(pyaw));
+			    		final Entity mob = world.spawnEntity(loc, EntityType.PIG);
+			    		
+			    		hoverpigs.add(mob);
+			    		targets.put(player, targLoc);
+			    		targetsbypig.put(mob, Integer.valueOf(targets.get(player).hashCode()));
+			    		
+			    		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
+		    			public void run() {
+			            	int targtemp = targetsbypig.get(mob).hashCode();
+			            	boolean temp = true;
+			            	
+			            	if ((temp) && (world.getLivingEntities().contains(mob))) {
+			            		Vector pvec = new Vector();
 			
-			Location loc = player.getLocation().add(2.0D * Math.cos(pyaw), 2.0D, 2.0D * Math.sin(pyaw));
-    		final Entity mob = world.spawnEntity(loc, EntityType.PIG);
-    		
-    		hoverpigs.add(mob);
-    		targets.put(player, targLoc);
-    		targetsbypig.put(mob, Integer.valueOf(targets.get(player).hashCode()));
-    		
-    		getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
-    			public void run() {
-	            	int targtemp = targetsbypig.get(mob).hashCode();
-	            	boolean temp = true;
-	            	
-	            	if ((temp) && (world.getLivingEntities().contains(mob))) {
-	            		Vector pvec = new Vector();
-	
-	            		pvec.setX(targLoc.getBlockX() 
-	            				- mob.getLocation().getX());
-	            		pvec.setZ(targLoc.getBlockZ() 
-	            				- mob.getLocation().getZ());
-	            		pvec.setY(targLoc.getBlockY() 
-	            				- mob.getLocation().getY());
-	            		
-	            		if (pvec.length() <= 1.0D) {
-	            			mob.setFireTicks(20);
-	            		} else {
-	            			mob.setVelocity(pvec.normalize().multiply(1.25D));
-	            			mob.setFallDistance(20.0F);
-	            		}
-	            	}
-	            }
-    		}, 1L, 1L);
-    		
+			            		pvec.setX(targLoc.getBlockX() 
+			            				- mob.getLocation().getX());
+			            		pvec.setZ(targLoc.getBlockZ() 
+			            				- mob.getLocation().getZ());
+			            		pvec.setY(targLoc.getBlockY() 
+			            				- mob.getLocation().getY());
+			            		
+			            		if (pvec.length() <= 1.0D) {
+			            			mob.setFireTicks(20);
+			            		} else {
+			            			mob.setVelocity(pvec.normalize().multiply(1.25D));
+			            			mob.setFallDistance(20.0F);
+			            		}
+			            	}
+			            }
+		    		}, 1L, 1L);
+					}
+				} else {
+					player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&4You don't have permission!"));
+				}
+			} else {
+				sender.sendMessage("[LBExplosiveRollbacks] Only players may run this command!");
+			}
+			
 			return true;
 		}
 		
